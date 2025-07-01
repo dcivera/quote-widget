@@ -4,6 +4,16 @@ const CACHE_TTL_H = 24;
 const FONT_QUOTE = new Font('Avenir-Medium', 25);
 const FONT_ATTR  = new Font('Avenir-Medium', 18);
 
+// ── Helper: deterministic PRNG (Mulberry32) ────────────────────────
+function mulberry32(a) {
+  return function () {
+    a |= 0; a = (a + 0x6D2B79F5) | 0;
+    let t = Math.imul(a ^ a >>> 15, 1 | a);
+    t ^= t + Math.imul(t ^ t >>> 7, 61 | t);
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+
 // ── Force-refresh (widget parameter) ──────────────────────────────
 const force = args.widgetParameter?.toLowerCase() === 'refresh';
 
@@ -28,17 +38,10 @@ try {
   quotes = [{ quote: 'Stay hungry, stay foolish.', attribution: 'Steve Jobs' }];
 }
 
-// ── Pick today's quote ─────────────────────────────────────────────
-// Calculate days since epoch for consistent rotation
-const today = new Date();
-const epochStart = new Date('2000-01-01');
-const daysSinceEpoch = Math.floor((today - epochStart) / (1000 * 60 * 60 * 24));
-
-// Use modulo to cycle through quotes
-// Add a prime number multiplier to improve distribution
-const prime = 31;
-const index = (daysSinceEpoch * prime) % quotes.length;
-const choice = quotes[index];
+// ── Pick today’s quote ─────────────────────────────────────────────
+const seedStr = new Date().toISOString().slice(0,10).replace(/-/g,''); // YYYYMMDD
+const rng     = mulberry32(Number(seedStr));
+const choice  = quotes[Math.floor(rng() * quotes.length)];
 
 // ── Build widget ───────────────────────────────────────────────
 const widget = new ListWidget();
