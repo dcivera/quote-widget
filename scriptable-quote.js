@@ -78,6 +78,19 @@ try {
 } catch (e) {
   console.log('Failed to save used IDs:', e);
 }
+/*
+// ── TEST CASE - Comment out this entire block after testing ──────
+
+// Override selectedQuote with test data containing \n characters
+selectedQuote = {
+  id: 999,
+  quote: "The best time to plant a tree was 20 years ago.\\nThe second best time is now.",
+  attribution: "Chinese Proverb"
+};
+console.log("TEST: Original quote text:", selectedQuote.quote);
+console.log("TEST: After \\n replacement:", selectedQuote.quote.replace(/\\n/g, '\n'));
+*/
+// ── END TEST CASE ─────────────────────────────────────────────────
 
 // ── Build widget ──────────────────────────────────────────────────
 const widget = new ListWidget();
@@ -85,8 +98,9 @@ const widget = new ListWidget();
 // Fixed background (no light-mode variant)
 widget.backgroundColor = new Color('#242424');
 
-// Quote
-const quoteTxt = widget.addText(selectedQuote.quote);
+// Quote - convert \n to actual line breaks
+const quoteText = selectedQuote.quote.replace(/\\n/g, '\n');
+const quoteTxt = widget.addText(quoteText);
 quoteTxt.font = FONT_QUOTE;
 quoteTxt.textColor = Color.white();
 quoteTxt.centerAlignText();
@@ -98,9 +112,10 @@ attrTxt.font = FONT_ATTR;
 attrTxt.textColor = Color.gray();
 attrTxt.centerAlignText();
 
-// Refresh
+// Refresh - set to tomorrow at 00:00:05 local time
 const refreshDate = new Date();
-refreshDate.setHours(24, 0, 5, 0);   // tomorrow at 00:00:05 local time
+refreshDate.setDate(refreshDate.getDate() + 1);  // Move to tomorrow
+refreshDate.setHours(0, 0, 5, 0);                // Set to 00:00:05
 widget.refreshAfterDate = refreshDate;
 
 // ── Present / set widget ──────────────────────────────────────────
