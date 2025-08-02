@@ -56,31 +56,59 @@ if (usedIds.length >= allIds.length) {
 // ── Get unused quote IDs ──────────────────────────────────────────
 const unusedIds = allIds.filter(id => !usedIds.includes(id));
 
-// ── Select a random unused quote ──────────────────────────────────
+// ── Check if we need a new quote (daily rotation) ────────────────
+const lastQuotePath = fm.joinPath(fm.documentsDirectory(), 'last_quote.json');
+let needNewQuote = true;
 let selectedQuote;
-if (unusedIds.length > 0) {
-  // Pick random from unused IDs
-  const randomIndex = Math.floor(Math.random() * unusedIds.length);
-  const selectedId = unusedIds[randomIndex];
-  selectedQuote = quotes.find(quote => quote.id === selectedId);
-  
-  // Add to used IDs
-  usedIds.push(selectedId);
-} else {
-  // Fallback to first quote if something goes wrong
-  selectedQuote = quotes[0];
-  usedIds = [selectedQuote.id];
+
+// Check if we have a quote from today
+if (fm.fileExists(lastQuotePath)) {
+  try {
+    const lastQuoteData = JSON.parse(fm.readString(lastQuotePath));
+    const lastDate = new Date(lastQuoteData.date);
+    const today = new Date();
+    
+    // If last quote is from today, reuse it
+    if (lastDate.toDateString() === today.toDateString()) {
+      selectedQuote = lastQuoteData.quote;
+      needNewQuote = false;
+    }
+  } catch (e) {
+    console.log('Failed to read last quote:', e);
+  }
 }
 
-// ── Save updated used IDs ─────────────────────────────────────────
-try {
-  fm.writeString(usedIdsPath, JSON.stringify(usedIds));
-} catch (e) {
-  console.log('Failed to save used IDs:', e);
+// ── Select a new random unused quote only if needed ───────────────
+if (needNewQuote) {
+  if (unusedIds.length > 0) {
+    // Pick random from unused IDs
+    const randomIndex = Math.floor(Math.random() * unusedIds.length);
+    const selectedId = unusedIds[randomIndex];
+    selectedQuote = quotes.find(quote => quote.id === selectedId);
+    
+    // Add to used IDs
+    usedIds.push(selectedId);
+  } else {
+    // Fallback to first quote if something goes wrong
+    selectedQuote = quotes[0];
+    usedIds = [selectedQuote.id];
+  }
+
+  // Save the new quote with today's date
+  try {
+    const quoteData = {
+      quote: selectedQuote,
+      date: new Date().toISOString()
+    };
+    fm.writeString(lastQuotePath, JSON.stringify(quoteData));
+    fm.writeString(usedIdsPath, JSON.stringify(usedIds));
+  } catch (e) {
+    console.log('Failed to save quote data:', e);
+  }
 }
-/*
+
 // ── TEST CASE - Comment out this entire block after testing ──────
-
+/*
 // Override selectedQuote with test data containing \n characters
 selectedQuote = {
   id: 999,
