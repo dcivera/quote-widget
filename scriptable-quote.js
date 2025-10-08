@@ -56,13 +56,13 @@ if (usedIds.length >= allIds.length) {
 // ── Get unused quote IDs ──────────────────────────────────────────
 const unusedIds = allIds.filter(id => !usedIds.includes(id));
 
-// ── Check if we need a new quote (daily rotation) ────────────────
+// ── Check if we need a new quote (daily rotation or forced refresh) ─
 const lastQuotePath = fm.joinPath(fm.documentsDirectory(), 'last_quote.json');
-let needNewQuote = true;
+let needNewQuote = force; // Start with force value
 let selectedQuote;
 
-// Check if we have a quote from today
-if (fm.fileExists(lastQuotePath)) {
+// Check if we have a quote from today (unless forcing refresh)
+if (!force && fm.fileExists(lastQuotePath)) {
   try {
     const lastQuoteData = JSON.parse(fm.readString(lastQuotePath));
     const lastDate = new Date(lastQuoteData.date);
@@ -72,10 +72,17 @@ if (fm.fileExists(lastQuotePath)) {
     if (lastDate.toDateString() === today.toDateString()) {
       selectedQuote = lastQuoteData.quote;
       needNewQuote = false;
+    } else {
+      // Quote is from a previous day, need a new one
+      needNewQuote = true;
     }
   } catch (e) {
     console.log('Failed to read last quote:', e);
+    needNewQuote = true;
   }
+} else {
+  // Either forcing refresh or no saved quote exists, need a new one
+  needNewQuote = true;
 }
 
 // ── Select a new random unused quote only if needed ───────────────
@@ -124,20 +131,26 @@ console.log("TEST: After \\n replacement:", selectedQuote.quote.replace(/\\n/g, 
 const widget = new ListWidget();
 
 // Fixed background (no light-mode variant)
-widget.backgroundColor = new Color('#242424');
+let startColor = new Color('#EE9C4D');
+let endColor = new Color('#E68438')
+let gradient = new LinearGradient();
+gradient.colors = [startColor, endColor];
+gradient.locations = [0, 1];
+widget.backgroundGradient = gradient;
+//widget.backgroundColor = new Color('#F77A30');
 
 // Quote - convert \n to actual line breaks
 const quoteText = selectedQuote.quote.replace(/\\n/g, '\n');
 const quoteTxt = widget.addText(quoteText);
 quoteTxt.font = FONT_QUOTE;
-quoteTxt.textColor = Color.white();
+quoteTxt.textColor = new Color('#E4E4E4');
 quoteTxt.centerAlignText();
 
 widget.addSpacer(6);                 // vertical gap
 
 const attrTxt = widget.addText(`— ${selectedQuote.attribution}`);
 attrTxt.font = FONT_ATTR;
-attrTxt.textColor = Color.gray();
+attrTxt.textColor = new Color('#E4E4E4');
 attrTxt.centerAlignText();
 
 // Refresh - set to tomorrow at 00:00:05 local time
